@@ -1,10 +1,10 @@
 import pygame
+import sys
 import psycopg2
 from random import randrange
 from config import load_config
 import csv
 
-# Глобальные переменные игры
 RES = 500
 SIZE = 25
 x, y = randrange(0, RES, SIZE), randrange(0, RES, SIZE)
@@ -13,10 +13,8 @@ dx, dy = 0, 0
 score = 0
 LVL = 1
 pygame.init()
-import pygame
-import sys
+username = ''
 
-# Функция для ввода имени пользователя
 def get_username(screen):
     font = pygame.font.Font(None, 36)
     input_box = pygame.Rect(100, 100, 140, 32)
@@ -55,21 +53,20 @@ def get_username(screen):
         pygame.draw.rect(screen, color, input_box, 2)
 
         pygame.display.flip()
-
     return text
 
-# Основной цикл игры
 def main():
     pygame.init()
     screen = pygame.display.set_mode((400, 400))
     pygame.display.set_caption('Enter Your Name')
 
+    global username
     username = get_username(screen)
     print('Your username is:', username)
 
 if __name__ == '__main__':
     main()
-# Подключение к базе данных
+
 def connect_to_db():
     try:
         config = load_config()
@@ -79,7 +76,6 @@ def connect_to_db():
     except psycopg2.DatabaseError as error:
         print(f'Error connecting to PostgreSQL: {error}')
 
-# Создание таблицы результатов игры в базе данных
 def create_game_table(conn):
     try:
         cur = conn.cursor()
@@ -87,9 +83,9 @@ def create_game_table(conn):
             CREATE TABLE IF NOT EXISTS user_score (
                 id SERIAL PRIMARY KEY,
                 user_id INT NOT NULL,
+                username TEXT NOT NULL,
                 score INT NOT NULL,
-                level INT NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                level INT NOT NULL
             )
         """)
         conn.commit()
@@ -98,22 +94,20 @@ def create_game_table(conn):
     except psycopg2.DatabaseError as error:
         print(f'Error creating game table: {error}')
 
-# Функция для вставки данных игры в базу данных
-def insert_game_data(conn, user_id, score, level):
+def insert_game_data(conn, user_id, username, score, level):
     try:
         cur = conn.cursor()
-        cur.execute("INSERT INTO user_score (us, score, level) VALUES (%s, %s, %s)", (user_id, score, level))
+        cur.execute("INSERT INTO user_score (user_id, username, score, level) VALUES (%s, %s, %s, %s)", (user_id, username, score, level))
         conn.commit()
         cur.close()
         print('Game data inserted successfully.')
     except psycopg2.DatabaseError as error:
         print(f'Error inserting game data: {error}')
 
-# Функция для записи данных игры в CSV файл
-def write_to_csv(user_id, score, level):
+def write_to_csv(user_id, username, score, level):
     with open('game_results.csv', mode='a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([user_id, score, level])
+        writer.writerow([user_id, username, score, level])
 
 # Генерация яблок
 def generate_apples(num_apples):
@@ -199,10 +193,10 @@ def main(FPS, user_id):
 
         if x < 0 or x > RES - SIZE or y < 0 or y > RES - SIZE or len(snake) != len(set(snake)):
             # Вставка данных игры в базу данных перед завершением игры
-            insert_game_data(conn, user_id, score, LVL)
+            insert_game_data(conn, user_id, str(username), score, LVL)
 
             # Запись данных игры в CSV файл перед завершением игры
-            write_to_csv(user_id, score, LVL)
+            write_to_csv(user_id, username, score, LVL)
 
             end_text = font.render('Game Over', True, (255, 255, 255))
             sc.blit(end_text, (RES // 2 - end_text.get_width() // 2, RES // 2 - end_text.get_height() // 2))
@@ -214,6 +208,6 @@ def main(FPS, user_id):
             exit()
 
 if __name__ == "__main__":
-    FPS = 5
+    FPS = 10
     user_id = 1  # Пример идентификатора пользователя
     main(FPS, user_id)
