@@ -1,0 +1,5 @@
+cities = ("Almaty", "Astana", "Shymkent")
+y = list(cities)
+y.remove("Almaty")
+cities = tuple(y)
+print(cities)
