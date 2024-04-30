@@ -242,6 +242,4 @@ def insert_or_update_user_from_console():
 if __name__ == '__main__':
 
     config = load_config()
-    query_data_with_pattern()
-
-    
+    query_data_with_pattern()    
